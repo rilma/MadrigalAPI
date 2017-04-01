@@ -1,22 +1,30 @@
 #!python
 
-"""madrigalPColor.py is a remote command-line application  that creates PColor plots from Madrigal data
+"""madrigalScatter.py is a remote command-line application  that creates scatter plots from Madrigal data
 
 Usage::
 
-    python madrigalPColor.py  --url=madrigalUrl --file=filename --parm=parameter
+    python madrigalScatter.py  --url=madrigalUrl --file=filename --parm=parameter
     --output=outputFile --name=userName --email=userEmail --affiliation=userAffilitation
     [--filter=filterString --title=plotTitle --startHour=startHour --endHour=endHour
-    --minAlt=minimum_altitude --maxAlt=maximum_altitude --minParm=minimum_parm_value 
-    --maxParm=maximum_parameter_value]
+    --yMin=y_minimum --yMax=y_maximum]
 
 See http://madrigal.haystack.mit.edu/madrigal/ug_commandLine.html#isprint
-for details of how filters work. Optional startHour and endHour are UT hours, with 0
+for details of how filters work.  Optional startHour and endHour are UT hours, with 0
 being midnight UT on the day the experiment started.  Default is entire experiment.
 
-This script requires Matplotlib be installed.
 
+Example::
+
+    python madrigalScatter.py  --url=http://madrigal.haystack.mit.edu/madrigal \
+    --file=/opt/madrigal/experiments/1998/mlh/20jan98/mlh980120g.002 --parm=systmp \
+    --output=/tmp/mlh_20jan98.png --name="Bill Rideout" --email=brideout@haystack.mit.edu \
+    --affiliation=MIT --filter="filter=elm,80,90"
+
+Requires Matplotlib be installed
 """
+
+# $Id: madrigalScatter.py 3304 2011-01-17 15:25:59Z brideout $
 
 import os, os.path, sys
 import getopt
@@ -25,15 +33,22 @@ import getopt
 import madrigalWebPlot.madrigalPlot
 import madrigalWeb.madrigalWeb
 
-usage = """python madrigalPColor.py  --url=<url> --file=<file> --parm=<parm>
+usage = """python madrigalScatter.py  --url=<url> --file=<file> --parm=<parm>
 --output=<output> --name=<name> --email=<email> --affiliation=<affiliation>
 [--filter=<filter> --title=<title> --startHour=<startHour> --endHour=<endHour>
---minAlt=<minimum_altitude> --maxAlt=<maximum_altitude> --minParm=<minimum_parm_value> 
---maxParm=<maximum_parameter_value>]
+--yMin=<y_minimum> --yMax=<y_maximum>]
 
 See http://madrigal.haystack.mit.edu/madrigal/ug_commandLine.html#isprint
 for details of how filters work. Optional startHour and endHour are UT hours, with 0
 being midnight UT on the day the experiment started.  Default is entire experiment.
+Error will be raised if startHour and/or endHour eliminate all data.
+
+Example:
+
+python madrigalScatter.py  --url=http://madrigal.haystack.mit.edu/madrigal \
+--file=/opt/madrigal/experiments/1998/mlh/20jan98/mlh980120g.002 --parm=systmp \
+--output=/tmp/mlh_20jan98.png --name="Bill Rideout" --email=brideout@haystack.mit.edu \
+--affiliation=MIT --filter="filter=elm,80,90"
 
 """
 
@@ -47,12 +62,10 @@ user_email = None
 user_affiliation = None
 filtStr = ''   # default
 title = None   # default
-startHour=None
-endHour=None
-minAlt=None
-maxAlt=None
-minParm=None
-maxParm=None
+startHour = None
+endHour = None
+yMin = None
+yMax = None
 
 args = ('url=',
         'file=',
@@ -65,10 +78,8 @@ args = ('url=',
         'title=',
         'startHour=',
         'endHour=',
-        'minAlt=',
-        'maxAlt=',
-        'minParm=',
-        'maxParm=',
+        'yMin=',
+        'yMax=',
         'help')
 
 try:
@@ -78,7 +89,7 @@ try:
         sys.exit(0)
 except getopt.GetoptError, err:
     print( usage )
-    print( str(err) )
+    print( str(err)   )
     sys.exit(2)
         
 for o, a in opts:
@@ -86,7 +97,7 @@ for o, a in opts:
         try:
             madWebObj = madrigalWeb.madrigalWeb.MadrigalData(a)
         except:
-            print( usage )
+            print( usage
             raise IOError( 'Unable to connect to Madrigal site %s' % (a) )
     elif o in ("-h", "--help"):
         print( usage )
@@ -133,38 +144,27 @@ for o, a in opts:
         except:
             print( usage )
             raise IOError( 'endHour must be number, not <%s>' % (a) )
-    elif o == '--minAlt':
+    elif o == '--yMin':
         try:
-            minAlt = float(a)
+            yMin = float(a)
         except:
             print( usage )
-            raise IOError( 'minAlt must be number, not <%s>' % (a) )
-    elif o == '--maxAlt':
+            raise IOError( 'yMin must be number, not <%s>' % (a) )
+    elif o == '--yMax':
         try:
-            maxAlt = float(a)
+            yMax = float(a)
         except:
             print( usage )
-            raise IOError( 'maxAlt must be number, not <%s>' % (a) )
-    elif o == '--minParm':
-        try:
-            minParm = float(a)
-        except:
-            print( usage )
-            raise IOError( 'minParm must be number, not <%s>' % (a) )
-    elif o == '--maxParm':
-        try:
-            maxParm = float(a)
-        except:
-            print( usage )
-            raise IOError( 'maxParm must be number, not <%s>' % (a) )
+            raise IOError( 'yMax must be number, not <%s>' % (a) )
 
     else:
         print( usage )
         raise IOError( 'Unknown option <%s>' % (a) )
-
+    
 if len(argList) != 0:
     print( usage )
     raise IOError( 'Unknown arguments <%s>' % (str(argList)) )
+
 
 # verify all needed input given
 if madWebObj == None:
@@ -181,19 +181,22 @@ if savedFile == None:
     raise IOError( '--output required argument (example: --output=/tmp/mlh_20jan98.png)' )
 if user_fullname == None:
     print( usage )
-    raise IOError( '--name required argument (example: --name="Ronald Ilma")' )
+    raise IOError( '--name required argument (example: --name="Bill Rideout")' )
 if user_email == None:
     print( usage )
-    raise IOError( '--email required argument (example: --email=rri5@cornell.edu)' )
+    raise IOError( '--email required argument (example: --email=brideout@haystack.mit.edu)' )
 if user_affiliation == None:
     print( usage )
-    raise IOError( '--affiliation required argument (example: --affiliation=Cornell)' )
+    raise IOError( '--affiliation required argument (example: --affiliation=MIT)' )
+if yMin != None and yMax != None:
+    if yMin >= yMax:
+        raise IOError( '--yMin must be less than --yMax' )
 
 
 ### start graph creation ###
 
 
-parmStr = 'uth,gdalt,%s' % (parm)
+parmStr = 'uth,%s' % (parm)
 
 # we need to make another isprint call just to find the first date in the file
 dateStr = madWebObj.isprint(filename, 'year,month,day', 'filter=recno,0,4',
@@ -226,16 +229,12 @@ else:
     titleStr = title
 
 xLabelStr = 'Hours since midnight UT %04i-%02i-%02i' % (year, month, day)
-yLabelStr = 'Alt (km)'
+yLabelStr = parm
 
-madrigalWebPlot.madrigalPlot.madPcolorPlot(isprintStr, titleStr, xLabelStr,
-                                           yLabelStr, savedFile,
-                                           maxNumTimes = 500,
-                                           maxNumAlt = 100,
-                                           truncateIsprint = True,
-                                           startTime=startHour,
-                                           endTime=endHour,
-                                           yMinimum=minAlt,
-                                           yMaximum=maxAlt,
-                                           minColormap=minParm,
-                                           maxColormap=maxParm)
+madrigalWebPlot.madrigalPlot.madScatterPlot(isprintStr, titleStr, xLabelStr,
+                                            yLabelStr, savedFile,
+                                            maxNumPoints = 1000,
+                                            startTime=startHour,
+                                            endTime=endHour,
+                                            yMin=yMin,
+                                            yMax=yMax)
