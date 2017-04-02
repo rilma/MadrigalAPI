@@ -13,14 +13,6 @@ See http://madrigal.haystack.mit.edu/madrigal/ug_commandLine.html#isprint
 for details of how filters work.  Optional startHour and endHour are UT hours, with 0
 being midnight UT on the day the experiment started.  Default is entire experiment.
 
-
-Example::
-
-    python madrigalScatter.py  --url=http://madrigal.haystack.mit.edu/madrigal \
-    --file=/opt/madrigal/experiments/1998/mlh/20jan98/mlh980120g.002 --parm=systmp \
-    --output=/tmp/mlh_20jan98.png --name="Bill Rideout" --email=brideout@haystack.mit.edu \
-    --affiliation=MIT --filter="filter=elm,80,90"
-
 Requires Matplotlib be installed
 """
 
@@ -42,13 +34,6 @@ See http://madrigal.haystack.mit.edu/madrigal/ug_commandLine.html#isprint
 for details of how filters work. Optional startHour and endHour are UT hours, with 0
 being midnight UT on the day the experiment started.  Default is entire experiment.
 Error will be raised if startHour and/or endHour eliminate all data.
-
-Example:
-
-python madrigalScatter.py  --url=http://madrigal.haystack.mit.edu/madrigal \
---file=/opt/madrigal/experiments/1998/mlh/20jan98/mlh980120g.002 --parm=systmp \
---output=/tmp/mlh_20jan98.png --name="Bill Rideout" --email=brideout@haystack.mit.edu \
---affiliation=MIT --filter="filter=elm,80,90"
 
 """
 
@@ -181,13 +166,13 @@ if savedFile == None:
     raise IOError( '--output required argument (example: --output=/tmp/mlh_20jan98.png)' )
 if user_fullname == None:
     print( usage )
-    raise IOError( '--name required argument (example: --name="Bill Rideout")' )
+    raise IOError( '--name required argument (example: --name="Ronald Ilma")' )
 if user_email == None:
     print( usage )
-    raise IOError( '--email required argument (example: --email=brideout@haystack.mit.edu)' )
+    raise IOError( '--email required argument (example: --email=rri5@cornell.edu)' )
 if user_affiliation == None:
     print( usage )
-    raise IOError( '--affiliation required argument (example: --affiliation=MIT)' )
+    raise IOError( '--affiliation required argument (example: --affiliation=Cornell)' )
 if yMin != None and yMax != None:
     if yMin >= yMax:
         raise IOError( '--yMin must be less than --yMax' )
